@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETS Portable Testbench Harness - Dashboard Diagnostik</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(1000%); }
+    }
+    .cctv-scanline {
+      animation: scanline 8s linear infinite;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col select-none">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="bg-slate-900/90 border-b border-slate-800 px-6 py-3 flex flex-wrap justify-between items-center shadow-lg sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xl shadow-inner">
+        <i class="fa-solid fa-train-subway"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-bold tracking-wide text-white uppercase">ETS Portable Testbench</h1>
+          <span class="px-2 py-0.5 text-xs font-semibold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">v2.4 NVMe Core</span>
+        </div>
+        <p class="text-xs text-slate-400">Sistem Pengesanan & Pengesahan Perkakasan Rel In-Situ (Raspberry Pi 5)</p>
+      </div>
+    </div>
+
+    <!-- System Telemetry Right -->
+    <div class="flex items-center gap-6 text-xs">
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+        <i class="fa-solid fa-hard-drive text-emerald-400"></i>
+        <span>NVMe SSD: <strong class="text-emerald-300">256 GB (82% Bebas)</strong></span>
+      </div>
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+        <i class="fa-solid fa-battery-three-quarters text-cyan-400"></i>
+        <span>Bateri: <strong class="text-cyan-300">94% (4j 15m)</strong></span>
+      </div>
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+        <i class="fa-regular fa-clock text-amber-400"></i>
+        <span id="live-clock" class="font-mono text-amber-300 font-bold">15:42:08 UTC</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 p-6 flex flex-col gap-5 max-w-[1700px] mx-auto w-full">
+
+    <!-- PANEL 1: MODUL SAMBUNGAN WI-FI TREN & KAWALAN IMBASAN -->
+    <section class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-4 mb-4">
+        
+        <!-- Wi-Fi Status Left -->
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-2xl">
+            <i class="fa-solid fa-wifi animate-pulse"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2.5">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Status Sambungan Wi-Fi Tren</span>
+              <span id="wifi-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> TERSAMBUNG
+              </span>
+            </div>
+            <div class="flex items-center gap-3 mt-1">
+              <span class="text-sm font-bold text-white flex items-center gap-1.5">
+                SSID: <span id="current-ssid" class="text-cyan-300 font-mono">ETS-CAR-M1-WIFI_DIAG</span>
+              </span>
+              <span class="text-xs text-slate-400">|</span>
+              <span class="text-xs text-slate-300">Isyarat: <strong class="text-emerald-400 font-mono">-48 dBm (Cemerlang)</strong></span>
+              <span class="text-xs text-slate-400">|</span>
+              <span class="text-xs text-slate-300">IP Kit: <strong class="text-cyan-400 font-mono">192.168.10.150</strong></span>
+              <span class="text-xs text-slate-400">|</span>
+              <span class="text-xs text-slate-300">Gateway Tren: <strong class="text-slate-200 font-mono">192.168.10.1</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diagnostic Actions Right -->
+        <div class="flex items-center gap-3">
+          <select id="train-model-select" class="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-cyan-500">
+            <option value="ets_cl93">Tren Sasaran: ETS Class 93 (6-Car)</option>
+            <option value="scs_cl92">Tren Sasaran: SCS Class 92 (6-Car)</option>
+            <option value="emu_komuter">Tren Sasaran: 3-Car EMU Komuter</option>
+            <option value="dmu_diesel">Tren Sasaran: Class 61 Diesel DMU</option>
+          </select>
+          <button onclick="triggerWifiRescan()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-2">
+            <i class="fa-solid fa-arrows-rotate"></i> Imbas Semula Wi-Fi
+          </button>
+          <button id="btn-start-audit" onclick="runAutoAudit()" class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2">
+            <i class="fa-solid fa-play"></i> Mulakan Ujian Automatik
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Bar Audit -->
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-slate-400 shrink-0 font-medium">Status Kemajuan Audit:</span>
+        <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+          <div id="audit-progress" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-full rounded-full transition-all duration-300" style="width: 75%;"></div>
+        </div>
+        <span id="audit-percent" class="text-xs font-mono font-bold text-cyan-300 shrink-0">75% (PACU M2 Verified)</span>
+      </div>
+    </section>
+
+    <!-- GRID DUA LAJUR: SENARAI PERANTI & SUAPAN LIVE -->
+    <div class="grid grid-cols-12 gap-5">
+
+      <!-- ================= LAJUR KIRI: JADUAL IMBASAN IP & PERANTI ================= -->
+      <section class="col-span-12 lg:col-span-7 bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-network-wired text-cyan-400"></i>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-white">Senarai Nod Rangkaian Tren Dikesan</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">Jumlah Peranti: <strong class="text-cyan-400">8 Ditemui</strong></span>
+              <button onclick="pingAllNodes()" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300 transition">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Ping Semua
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Devices -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-800 font-semibold bg-slate-950/40">
+                  <th class="py-2.5 px-3">Komponen (Berdasarkan Rajah)</th>
+                  <th class="py-2.5 px-3">Gerabak</th>
+                  <th class="py-2.5 px-3">Alamat IP</th>
+                  <th class="py-2.5 px-3">Latensi Ping</th>
+                  <th class="py-2.5 px-3">Status Komponen</th>
+                  <th class="py-2.5 px-3 text-right">Tindakan Ujian</th>
+                </tr>
+              </thead>
+              <tbody id="device-table-body" class="divide-y divide-slate-800/60 font-mono">
+                <!-- ACSU -->
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-sans font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ACSU (Train Comm Switch)
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">Cab (Mc)</td>
+                  <td class="py-2.5 px-3 text-cyan-300">192.168.10.10</td>
+                  <td class="py-2.5 px-3 text-emerald-400">1.2 ms</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ONLINE</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="triggerSpecificTest('ACSU')" class="px-2 py-1 bg-slate-800 hover:bg-cyan-600 hover:text-white rounded text-[11px] text-slate-300 transition">Uji Sinyal</button>
+                  </td>
+                </tr>
+
+                <!-- PACU Mc -->
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-sans font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> PACU (PA & Video Control)
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">Mc Car</td>
+                  <td class="py-2.5 px-3 text-cyan-300">192.168.10.20</td>
+                  <td class="py-2.5 px-3 text-emerald-400">1.5 ms</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ONLINE</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="triggerSpecificTest('PACU Mc')" class="px-2 py-1 bg-slate-800 hover:bg-cyan-600 hover:text-white rounded text-[11px] text-slate-300 transition">Uji Audio</button>
+                  </td>
+                </tr>
+
+                <!-- PACU T -->
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-sans font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> PACU (PA & Video Control)
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">T Car</td>
+                  <td class="py-2.5 px-3 text-cyan-300">192.168.10.21</td>
+                  <td class="py-2.5 px-3 text-emerald-400">1.4 ms</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ONLINE</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="triggerSpecificTest('PACU T')" class="px-2 py-1 bg-slate-800 hover:bg-cyan-600 hover:text-white rounded text-[11px] text-slate-300 transition">Uji Audio</button>
+                  </td>
+                </tr>
+
+                <!-- PACU M1 -->
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-sans font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> PACU (PA & Video Control)
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">M1 Car</td>
+                  <td class="py-2.5 px-3 text-cyan-300">192.168.10.22</td>
+                  <td class="py-2.5 px-3 text-emerald-400">2.1 ms</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ONLINE</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="triggerSpecificTest('PACU M1')" class="px-2 py-1 bg-slate-800 hover:bg-cyan-600 hover:text-white rounded text-[11px] text-slate-300 transition">Uji Chime</button>
+                  </td>
+                </tr>
+
+                <!-- TDVR -->
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-sans font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> TDVR Video Recorder
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">Cab (Mc)</td>
+                  <td class="py-2.5 px-3 text-cyan-300">192.168.10.50</td>
+                  <td class="py-2.5 px-3 text-emerald-400">2.3 ms</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ONLINE</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="triggerSpecificTest('TDVR')" class="px-2 py-1 bg-slate-800 hover:bg-cyan-600 hover:text-white rounded text-[11px] text-slate-300 transition">Semak Strim</button>
+                  </td>
+                </tr>
+
+                <!-- TLCD Driver -->
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-sans font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> TLCD Touchscreen Driver
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">Cab Mc</td>
+                  <td class="py-2.5 px-3 text-cyan-300">192.168.10.60</td>
+                  <td class="py-2.5 px-3 text-emerald-400">3.1 ms</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ONLINE</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="triggerSpecificTest('TLCD')" class="px-2 py-1 bg-slate-800 hover:bg-cyan-600 hover:text-white rounded text-[11px] text-slate-300 transition">Test Render</button>
+                  </td>
+                </tr>
+
+                <!-- DCU Door -->
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="py-2.5 px-3 font-sans font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> DCU (Unit Kawalan Pintu)
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">M1 Car</td>
+                  <td class="py-2.5 px-3 text-cyan-300">192.168.10.85</td>
+                  <td class="py-2.5 px-3 text-amber-400">4.0 ms</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ONLINE</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="triggerSpecificTest('DCU')" class="px-2 py-1 bg-slate-800 hover:bg-cyan-600 hover:text-white rounded text-[11px] text-slate-300 transition">OPC UA Tag</button>
+                  </td>
+                </tr>
+
+                <!-- BCU Brake (Simulasi Ralat) -->
+                <tr class="hover:bg-slate-800/40 transition bg-red-950/10">
+                  <td class="py-2.5 px-3 font-sans font-bold text-rose-300 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span> BCU (Sistem Brek)
+                  </td>
+                  <td class="py-2.5 px-3 text-slate-300 font-sans">Mc Car</td>
+                  <td class="py-2.5 px-3 text-rose-400">192.168.10.90</td>
+                  <td class="py-2.5 px-3 text-rose-500">TIMEOUT</td>
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">OFFLINE / GAGAL</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-sans">
+                    <button onclick="diagnoseBcu()" class="px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-[11px] font-bold transition">Diagnos</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Protocol status footer bar -->
+        <div class="mt-4 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs text-slate-400">
+          <div class="flex items-center gap-4">
+            <span>Enjin Protokol:</span>
+            <span class="text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> MQTT Broker OK</span>
+            <span class="text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> OPC UA Active (ns=2)</span>
+            <span class="text-cyan-400 flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> TCP Socket P5000</span>
+          </div>
+          <span class="text-slate-500 font-mono">Format Protokol: IEC 61375 / IEEE 802.3</span>
+        </div>
+      </section>
+
+      <!-- ================= LAJUR KANAN: CCTV LIVE & PENYUNTIK ISYARAT ================= -->
+      <section class="col-span-12 lg:col-span-5 flex flex-col gap-5">
+
+        <!-- KOTAK 1: SUAPAN CCTV MASA NYATA -->
+        <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col justify-between">
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-video text-violet-400"></i>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-white">Suapan Kamera CCTV Tren (RTSP)</h2>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> LIVE STREAM
+            </span>
+          </div>
+
+          <!-- Video Simulation Frame -->
+          <div class="relative bg-slate-950 rounded-xl overflow-hidden border border-slate-800 aspect-video flex items-center justify-center shadow-inner">
+            <!-- Simulated Camera Grid -->
+            <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+            <div class="absolute inset-0 cctv-scanline bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent pointer-events-none"></div>
+
+            <!-- Train Interior SVG Visual -->
+            <svg class="w-48 h-36 opacity-30 text-slate-500" viewBox="0 0 100 80" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="15" y="10" width="70" height="55" rx="4" />
+              <line x1="25" y1="20" x2="45" y2="20" />
+              <line x1="55" y1="20" x2="75" y2="20" />
+              <line x1="30" y1="35" x2="70" y2="35" />
+              <rect x="42" y="45" width="16" height="20" />
+              <circle cx="50" cy="18" r="3" fill="currentColor" />
+            </svg>
+
+            <!-- Overlay Badges on Video -->
+            <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur px-2 py-1 rounded text-[11px] font-mono text-cyan-300 border border-slate-700/60">
+              CAM-02: SALOON 360° (M1 CAR)
+            </div>
+            <div class="absolute top-3 right-3 bg-slate-900/80 backdrop-blur px-2 py-1 rounded text-[11px] font-mono text-emerald-400 border border-slate-700/60">
+              1080p @ 25.0 FPS
+            </div>
+            <div class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur px-2 py-1 rounded text-[11px] font-mono text-slate-300 border border-slate-700/60 flex items-center gap-1.5">
+              <i class="fa-solid fa-server text-blue-400"></i> TDVR IP: 192.168.10.50:554
+            </div>
+          </div>
+
+          <!-- Camera Selector Bar -->
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <select id="camera-select" onchange="changeCameraFeed(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none w-full">
+              <option value="saloon_m1">Saloon 360° Camera - Gerabak M1</option>
+              <option value="saloon_m2">Saloon Camera - Gerabak M2</option>
+              <option value="front_cab">Front Camera - Mc Cab Hadapan</option>
+              <option value="side_cab">Side View Camera - Mc Cab</option>
+            </select>
+            <button onclick="captureScreenshot()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold whitespace-nowrap transition">
+              <i class="fa-solid fa-camera mr-1"></i> Tangkap Imej
+            </button>
+          </div>
+        </div>
+
+        <!-- KOTAK 2: PENCETUS ISYARAT OUTPUT (MQTT, OPC UA, TCP) -->
+        <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-bolt text-amber-400"></i>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-white">Ujian Output & Suntikan Isyarat</h2>
+            </div>
+            <span class="text-xs text-slate-400">In-Situ Safe Triggers</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Trigger 1: Audio Chime (MQTT) -->
+            <button onclick="triggerOutputSignal('MQTT', 'PACU Chime', 'train/m1/pacu/cmd')" class="bg-slate-800/80 hover:bg-blue-600/20 hover:border-blue-500/50 p-3 rounded-xl border border-slate-700/80 text-left transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white group-hover:text-blue-300">Bunyikan Audio Chime</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono font-semibold">MQTT</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Pencetus nada audio pembesar suara kabin PACU M1.</p>
+            </button>
+
+            <!-- Trigger 2: Test Pattern LCD (TCP) -->
+            <button onclick="triggerOutputSignal('TCP', 'LCD Test Pattern', 'PORT 5000: HEX 0xAA 0x55 0x01')" class="bg-slate-800/80 hover:bg-cyan-600/20 hover:border-cyan-500/50 p-3 rounded-xl border border-slate-700/80 text-left transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white group-hover:text-cyan-300">Corak Ujian LCD</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono font-semibold">TCP RAW</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Papar skrin warna RGB pada skrin 19" / 24".</p>
+            </button>
+
+            <!-- Trigger 3: Door Open Permissive (OPC UA) -->
+            <button onclick="triggerOutputSignal('OPC UA', 'DCU Door Permissive', 'ns=2;s=Door.Test_Open')" class="bg-slate-800/80 hover:bg-orange-600/20 hover:border-orange-500/50 p-3 rounded-xl border border-slate-700/80 text-left transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white group-hover:text-orange-300">Simulasi Maklum Balas Pintu</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-mono font-semibold">OPC UA</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Membaca & menulis tag maklum balas DCU.</p>
+            </button>
+
+            <!-- Trigger 4: PEI Intercom Handshake -->
+            <button onclick="triggerOutputSignal('TCP/AUDIO', 'PEI Emergency Intercom', 'PORT 8080: SIP/RAW')" class="bg-slate-800/80 hover:bg-rose-600/20 hover:border-rose-500/50 p-3 rounded-xl border border-slate-700/80 text-left transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white group-hover:text-rose-300">Ujian Butang PEI</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-mono font-semibold">INTERCOM</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Semakan gelung mikrofon & pembesar suara penumpang.</p>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PANEL 3: KONSOL TERMINAL LOG PANTAS (NVMe BUFFER) -->
+    <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 shadow-xl flex flex-col">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-xs">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-terminal text-emerald-400"></i>
+          <span class="font-bold uppercase tracking-wider text-white">Log Diagnostik Masa Nyata (Disimpan ke NVMe /data/log)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="clearConsoleLog()" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] border border-slate-700 transition">
+            Kosongkan Paparan
+          </button>
+          <button onclick="exportAuditReport()" class="px-2.5 py-0.5 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded text-[11px] transition flex items-center gap-1">
+            <i class="fa-solid fa-file-arrow-down"></i> Eksport Laporan Rasmi
+          </button>
+        </div>
+      </div>
+      
+      <!-- Terminal Window -->
+      <div id="terminal-log" class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 font-mono text-xs text-slate-300 h-36 overflow-y-auto space-y-1">
+        <div><span class="text-slate-500">[15:42:01]</span> <span class="text-cyan-400">[INFO]</span> Modul Wi-Fi Raspberry Pi berjaya menyambung ke Access Point tren: <span class="text-white">ETS-CAR-M1-WIFI_DIAG</span> (IP: 192.168.10.150)</div>
+        <div><span class="text-slate-500">[15:42:02]</span> <span class="text-cyan-400">[INFO]</span> Imbasan rangkaian subnet 192.168.10.0/24 dimulakan melalui bas Ethernet tren.</div>
+        <div><span class="text-slate-500">[15:42:03]</span> <span class="text-emerald-400">[PASS]</span> 8 daripada 9 peranti ditemui responsif. Nod ACSU, PACU (Mc, T, M1, M2), TDVR, TLCD dalam keadaan aktif.</div>
+        <div><span class="text-slate-500">[15:42:05]</span> <span class="text-purple-400">[MQTT]</span> Melanggan topik telemetri tren <span class="text-cyan-300">train/ets/car_m1/pacu/telemetry</span>. Data diterima lancar.</div>
+        <div><span class="text-slate-500">[15:42:06]</span> <span class="text-orange-400">[OPC-UA]</span> Sesi bacaan pembolehubah TCMS & DCU dibuka: <span class="text-slate-200">ns=2;s=Train.Car_Mc.Door.Status (OK)</span>.</div>
+        <div><span class="text-slate-500">[15:42:07]</span> <span class="text-rose-400">[ALERT]</span> <strong class="text-rose-400">AMARAN:</strong> BCU Brek (192.168.10.90) gagal membalas paket ping ICMP! Memerlukan semakan fizikal bekalan 24V.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // Live Clock Function
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent = now.toTimeString().split(' ')[0] + ' MYT';
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Helper Log to Terminal
+    function addLog(level, message, colorClass = "text-cyan-400") {
+      const term = document.getElementById('terminal-log');
+      const timeStr = new Date().toTimeString().split(' ')[0];
+      const logRow = document.createElement('div');
+      logRow.innerHTML = `<span class="text-slate-500">[${timeStr}]</span> <span class="${colorClass}">[${level}]</span> ${message}`;
+      term.appendChild(logRow);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function clearConsoleLog() {
+      document.getElementById('terminal-log').innerHTML = '';
+      addLog('INFO', 'Konsol log telah dikosongkan oleh pengguna.', 'text-slate-400');
+    }
+
+    // Wi-Fi Rescan Simulation
+    function triggerWifiRescan() {
+      addLog('WIFI', 'Mengimbas saluran Wi-Fi 2.4GHz & 5GHz di sekitar kabin...', 'text-cyan-400');
+      const badge = document.getElementById('wifi-status-badge');
+      badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40";
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> MENGIMBAS...`;
+
+      setTimeout(() => {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> TERSAMBUNG`;
+        addLog('WIFI', 'Sambungan dikukuhkan semula ke Access Point: ETS-CAR-M1-WIFI_DIAG (-46 dBm).', 'text-emerald-400');
+      }, 1200);
+    }
+
+    // Ping All Nodes
+    function pingAllNodes() {
+      addLog('PING', 'Menghantar paket ICMP berkala (32 bait) ke semua 8 nod sasaran...', 'text-blue-400');
+      setTimeout(() => {
+        addLog('PING', 'Keputusan: 7 Nod Online (purata latensi 1.8ms), 1 Nod Gagal (BCU 192.168.10.90).', 'text-emerald-400');
+      }, 800);
+    }
+
+    // Trigger Specific Signal Test
+    function triggerOutputSignal(protocol, targetName, commandInfo) {
+      addLog(protocol, `Suntikan isyarat output dimulakan ke <strong class="text-white">${targetName}</strong> [${commandInfo}]...`, 'text-amber-400');
+      setTimeout(() => {
+        addLog('PASS', `Maklum balas diterima daripada ${targetName}: Respons kod 0x00 (AKTIF / BERFUNGSI).`, 'text-emerald-400');
+      }, 700);
+    }
+
+    function triggerSpecificTest(devName) {
+      addLog('TEST', `Melaksanakan rutin pengesahan diagnostik pantas bagi modul ${devName}...`, 'text-purple-400');
+      setTimeout(() => {
+        addLog('SUCCESS', `Modul ${devName} disahkan sihat. I/O beroperasi normal.`, 'text-emerald-400');
+      }, 600);
+    }
+
+    function diagnoseBcu() {
+      addLog('DIAG', 'Menyiasat nod BCU (192.168.10.90)... Tiada respons ARP. Disyaki kabel Ethernet tertanggal atau fius 24V terputus.', 'text-rose-400');
+    }
+
+    // Auto Audit Run
+    function runAutoAudit() {
+      const btn = document.getElementById('btn-start-audit');
+      const progressBar = document.getElementById('audit-progress');
+      const progressLabel = document.getElementById('audit-percent');
+      
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+      addLog('AUDIT', 'Audit menyeluruh automatik tren dimulakan mengikut profil ETS Class 93...', 'text-blue-400');
+      
+      let p = 0;
+      const interval = setInterval(() => {
+        p += 25;
+        if (p <= 100) {
+          progressBar.style.width = p + '%';
+          progressLabel.textContent = p + '% (Menguji gerabak...)';
+        }
+        if (p === 100) {
+          clearInterval(interval);
+          btn.disabled = false;
+          btn.classList.remove('opacity-50');
+          progressLabel.textContent = '100% Selesai (8/9 Nod Lulus)';
+          addLog('AUDIT', 'Audit automatik selesai dalam 4.2 saat! Laporan ringkasan disimpan ke storan NVMe.', 'text-emerald-400');
+        }
+      }, 500);
+    }
+
+    // Camera Switcher
+    function changeCameraFeed(camVal) {
+      addLog('RTSP', `Menukar strim kamera kepada: ${camVal}. Menghubungkan semula ke port 554...`, 'text-violet-400');
+    }
+
+    function captureScreenshot() {
+      addLog('TDVR', 'Tangkapan imej definisi tinggi daripada strim RTSP berjaya disimpan: /data/cctv_snap_1542.jpg', 'text-emerald-400');
+    }
+
+    function exportAuditReport() {
+      addLog('EXPORT', 'Menjana fail laporan diagnostik rasmi tren (Format: PDF & JSON)...', 'text-emerald-400');
+      setTimeout(() => {
+        alert('Laporan Diagnostik ETS berjaya dieksport ke /data/reports/ETS_DIAG_REPORT.pdf!');
+      }, 300);
+    }
+  </script>
+</body>
+</html>
